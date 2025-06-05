@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <title>Чотирикутник AR.js з маркерами A,B,C,D</title>
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
+  <style>
+    #info {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      font-family: monospace;
+      font-size: 14px;
+      padding: 10px;
+      max-width: 320px;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body style="margin:0; overflow:hidden;">
+  <a-scene embedded arjs="trackingMethod: best; sourceType: webcam;">
+    <a-camera position="0 0 0" look-controls-enabled="false"></a-camera>
+
+    <a-marker id="markerA" type="pattern" url="patterns/pattern-letterA.patt">
+      <a-sphere color="red" radius="0.05" position="0 0 0"></a-sphere>
+    </a-marker>
+
+    <a-marker id="markerB" type="pattern" url="patterns/pattern-letterB.patt">
+      <a-sphere color="green" radius="0.05" position="0 0 0"></a-sphere>
+    </a-marker>
+
+    <a-marker id="markerC" type="pattern" url="patterns/pattern-letterC.patt">
+      <a-sphere color="blue" radius="0.05" position="0 0 0"></a-sphere>
+    </a-marker>
+
+    <a-marker id="markerD" type="pattern" url="patterns/pattern-letterD.patt">
+      <a-sphere color="yellow" radius="0.05" position="0 0 0"></a-sphere>
+    </a-marker>
+
+    <a-entity id="lineAB" visible="false" line="color: red"></a-entity>
+    <a-entity id="lineBC" visible="false" line="color: red"></a-entity>
+    <a-entity id="lineCD" visible="false" line="color: red"></a-entity>
+    <a-entity id="lineDA" visible="false" line="color: red"></a-entity>
+  </a-scene>
+
+  <div id="info">
+    <div>Периметр: <span id="perimeter">-</span></div>
+    <div>Площа ABC: <span id="area-abc">-</span></div>
+    <div>Площа ABD: <span id="area-abd">-</span></div>
+    <div>Площа ACD: <span id="area-acd">-</span></div>
+    <div>Площа BCD: <span id="area-bcd">-</span></div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const markers = {
+        A: document.querySelector('#markerA'),
+        B: document.querySelector('#markerB'),
+        C: document.querySelector('#markerC'),
+        D: document.querySelector('#markerD')
+      };
+
+      const lineAB = document.querySelector('#lineAB');
+      const lineBC = document.querySelector('#lineBC');
+      const lineCD = document.querySelector('#lineCD');
+      const lineDA = document.querySelector('#lineDA');
+
+      let visible = { A: false, B: false, C: false, D: false };
+
+      ['A','B','C','D'].forEach(letter => {
+        const marker = markers[letter];
+        marker.addEventListener('markerFound', () => {
+          visible[letter] = true;
+          update();
+        });
+        marker.addEventListener('markerLost', () => {
+          visible[letter] = false;
+          update();
+        });
+      });
+
+      function getWorldPos(entity) {
+        const pos = new THREE.Vector3();
+        if (entity && entity.object3D) {
+          entity.object3D.getWorldPosition(pos);
+        }
+        return pos;
+      }
+
+      function setLine(lineEntity, start, end) {
+        lineEntity.setAttribute('line', `start: ${start.x} ${start.y} ${start.z}; end: ${end.x} ${end.y} ${end.z}; color: red`);
+      }
+
+      function distance(p1, p2) {
+        return p1.distanceTo(p2);
+      }
+
+      function triangleArea(p1, p2, p3) {
+        const a = distance(p1, p2);
+        const b = distance(p2, p3);
+        const c = distance(p3, p1);
+        const s = (a + b + c) / 2;
+        return Math.sqrt(s * (s - a) * (s - b) * (s - c));
+      }
+
+      function update() {
+  if (visible.A && visible.B && visible.C && visible.D) {
+    const points = [
+      {id: 'A', pos: getWorldPos(markerA)},
+      {id: 'B', pos: getWorldPos(markerB)},
+      {id: 'C', pos: getWorldPos(markerC)},
+      {id: 'D', pos: getWorldPos(markerD)}
+    ];
+
+    // Находим центр
+    const center = points.reduce((acc, p) => {
+      acc.x += p.pos.x;
+      acc.y += p.pos.y;
+      acc.z += p.pos.z;
+      return acc;
+    }, {x: 0, y: 0, z: 0});
+
+    center.x /= points.length;
+    center.y /= points.length;
+    center.z /= points.length;
+
+    // Функция для получения угла точки относительно центра в плоскости XY
+      function angleFromCenter(p) {
+          return Math.atan2(p.pos.z - center.z, p.pos.x - center.x); // используем XZ плоскость (AR)
+        }
+
+        // Сортируем точки по углу против часовой стрелки
+        points.sort((p1, p2) => angleFromCenter(p1) - angleFromCenter(p2));
+
+        // Получаем отсортированные позиции
+        const pos0 = points[0].pos;
+        const pos1 = points[1].pos;
+        const pos2 = points[2].pos;
+        const pos3 = points[3].pos;
+
+        // Включаем линии и ставим их в правильном порядке
+        lineAB.setAttribute('visible', true);
+        lineBC.setAttribute('visible', true);
+        lineCD.setAttribute('visible', true);
+        lineDA.setAttribute('visible', true);
+
+        setLine(lineAB, pos0, pos1);
+        setLine(lineBC, pos1, pos2);
+        setLine(lineCD, pos2, pos3);
+        setLine(lineDA, pos3, pos0);
+
+        // Считаем длины сторон и периметр
+        const ab = distance(pos0, pos1);
+        const bc = distance(pos1, pos2);
+        const cd = distance(pos2, pos3);
+        const da = distance(pos3, pos0);
+        const perimeter = ab + bc + cd + da;
+
+        // Площади треугольников (можно считать с исходными точками A,B,C,D, если нужно)
+        // Но теперь их надо тоже переопределить в соответствии с новым порядком
+        // Чтобы площади были читаемы, используем индексы точек:
+        // Треугольники: pos0-pos1-pos2, pos0-pos1-pos3, pos0-pos2-pos3, pos1-pos2-pos3
+
+        const area012 = triangleArea(pos0, pos1, pos2);
+        const area013 = triangleArea(pos0, pos1, pos3);
+        const area023 = triangleArea(pos0, pos2, pos3);
+        const area123 = triangleArea(pos1, pos2, pos3);
+
+        document.getElementById('perimeter').textContent = perimeter.toFixed(3);
+        document.getElementById('area-abc').textContent = area012.toFixed(3);
+        document.getElementById('area-abd').textContent = area013.toFixed(3);
+        document.getElementById('area-acd').textContent = area023.toFixed(3);
+        document.getElementById('area-bcd').textContent = area123.toFixed(3);
+      } else {
+        // Ховаємо лінії, якщо хоч один маркер не видимий
+        lineAB.setAttribute('visible', false);
+        lineBC.setAttribute('visible', false);
+        lineCD.setAttribute('visible', false);
+        lineDA.setAttribute('visible', false);
+
+        document.getElementById('perimeter').textContent = '-';
+        document.getElementById('area-abc').textContent = '-';
+        document.getElementById('area-abd').textContent = '-';
+        document.getElementById('area-acd').textContent = '-';
+        document.getElementById('area-bcd').textContent = '-';
+      }
+    }
+
+
+      setInterval(update, 100);
+    });
+  </script>
+</body>
+</html>

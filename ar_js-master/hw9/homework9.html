@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>MindAR Multi-Marker</title>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <script src="script.js" defer></script>
+    <style>
+      html,body{
+        height:100%;
+        width: 100%;
+        margin: 0;
+        overflow: hidden;
+        position: relative;
+      }
+      </style>
+  </head>
+  <body>
+    <a-scene mindar-image="imageTargetSrc: markers/targets.mind"
+             embedded color-space="sRGB"
+             renderer="antialias: true; alpha: true"
+             vr-mode-ui="enabled: false"
+             device-orientation-permission-ui="enabled: false">
+
+      <a-assets>
+        <video id="marker-video" src="assets/video.mp4" preload="auto" loop crossorigin="anonymous"></video>
+        <a-asset-item id="model-gltf" src="assets/model.glb"></a-asset-item>
+      </a-assets>
+
+      <a-entity mindar-image-target="targetIndex: 0" videohandler>
+        <a-video 
+          src="#marker-video"
+          width="1.5"
+          height="0.85"
+          position="0 0 0"
+          rotation="0 0 0"
+          id="video-plane">
+        </a-video>
+      </a-entity>
+
+      <a-entity mindar-image-target="targetIndex: 1">
+        <a-gltf-model 
+          src="#model-gltf"
+          scale="0.5 0.5 0.5"
+          position="0 0 0"
+          rotation="0 180 0">
+        </a-gltf-model>
+      </a-entity>
+
+      <a-camera position="0 6 100" look-controls="enabled: false"></a-camera>
+    </a-scene>
+  </body>
+</html>
