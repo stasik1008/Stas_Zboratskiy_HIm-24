@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AR Таблиця Менделєєва - Головна</title>
+
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: Arial, sans-serif; }
+    #info-panel {
+      position: fixed; top: 20px; right: 20px;
+      width: 250px; background: rgba(0,0,0,0.7);
+      color: white; padding: 10px; border-radius: 8px;
+      display: none; z-index: 1000;
+    }
+    #btn-charts {
+      position: fixed; bottom: 20px; left: 20px;
+      padding: 10px 15px; font-size: 16px;
+      cursor: pointer; border-radius: 8px;
+      background: rgba(255,255,255,0.9);
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <a-scene mindar-image="imageTargetSrc: assets/targets.mind;" embedded color-space="sRGB" renderer="colorManagement: true">
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  </a-scene>
+
+  <div id="info-panel">
+    <h2 id="element-symbol"></h2>
+    <p><b>Назва:</b> <span id="element-name"></span></p>
+    <p><b>Атомний номер:</b> <span id="element-number"></span></p>
+    <p><b>Маса:</b> <span id="element-mass"></span></p>
+    <p><b>Електронегативність:</b> <span id="element-en"></span></p>
+    <p><b>Радіус атома:</b> <span id="element-radius"></span> пм</p>
+    <p><b>Оболонки:</b> <span id="element-shells"></span></p>
+  </div>
+
+  <button id="btn-charts" 
+    style="
+      position: fixed;
+      bottom: 20px; 
+      left: 20px; 
+      padding: 10px 15px; 
+      font-size: 16px; 
+      cursor: pointer; 
+      border-radius: 8px; 
+      background: rgba(255,255,255,0.9);
+      border: none;
+      z-index: 9999;
+    "
+    onclick="location.href='charts.html'">
+    Тренди властивостей
+  </button>
+
+
+  <script>
+    fetch("data/elements.json")
+      .then(res => res.json())
+      .then(elementsData => {
+        AFRAME.registerComponent("element-visualizer", {
+          schema: { index: { type: "int" } },
+          init: function () {
+            const el = this.el;
+            const index = this.data.index;
+            const element = elementsData[index];
+            if (!element) return;
+
+            // Ядро
+            const nucleus = document.createElement("a-sphere");
+            nucleus.setAttribute("radius", 0.2);
+            nucleus.setAttribute("color", "#ff4444");
+            el.appendChild(nucleus);
+
+            // Символ елемента
+            const symbolText = document.createElement("a-text");
+            symbolText.setAttribute("value", element.symbol);
+            symbolText.setAttribute("align", "center");
+            symbolText.setAttribute("position", "0 0.3 0");
+            symbolText.setAttribute("color", "#fff");
+            symbolText.setAttribute("side", "double");
+            symbolText.setAttribute("scale", "0.5 0.5 0.5");
+            el.appendChild(symbolText);
+
+            // Назва елемента
+            const nameText = document.createElement("a-text");
+            nameText.setAttribute("value", element.name);
+            nameText.setAttribute("align", "center");
+            nameText.setAttribute("position", "0 0.15 0");
+            nameText.setAttribute("color", "#fff");
+            nameText.setAttribute("side", "double");
+            nameText.setAttribute("scale", "0.3 0.3 0.3");
+            el.appendChild(nameText);
+
+            // Атомний номер
+            const numberText = document.createElement("a-text");
+            numberText.setAttribute("value", `№ ${element.number}`);
+            numberText.setAttribute("align", "center");
+            numberText.setAttribute("position", "0 0.05 0");
+            numberText.setAttribute("color", "#fff");
+            numberText.setAttribute("side", "double");
+            numberText.setAttribute("scale", "0.3 0.3 0.3");
+            el.appendChild(numberText);
+
+            // Оболонки (електрони та кільця)
+              const shellDistances = [0.4, 0.6, 0.8, 1.0];
+              element.shells.forEach((count, shellIndex) => {
+                const radius = shellDistances[shellIndex];
+                const angleStep = (2 * Math.PI) / count;
+
+                for (let i = 0; i < count; i++) {
+                  const angle = i * angleStep;
+                  const x = radius * Math.cos(angle);
+                  const y = 0;
+                  const z = radius * Math.sin(angle);
+
+                  const electron = document.createElement("a-sphere");
+                  electron.setAttribute("radius", 0.05);
+                  electron.setAttribute("color", "#44ccff");
+                  electron.setAttribute("position", `${x} ${y} ${z}`);
+                  el.appendChild(electron);
+                }
+                
+                const ring = document.createElement("a-ring");
+                ring.setAttribute("color", "#ccc");
+                ring.setAttribute("radius-inner", radius - 0.005);
+                ring.setAttribute("radius-outer", radius + 0.005);
+                ring.setAttribute("rotation", "-90 0 0");
+                el.appendChild(ring);
+              });
+          }
+        });
+
+        const scene = document.querySelector("a-scene");
+        for (let i = 0; i < elementsData.length; i++) {
+          const target = document.createElement("a-entity");
+          target.setAttribute("mindar-image-target", `targetIndex: ${i}`);
+
+          const content = document.createElement("a-entity");
+          content.setAttribute("element-visualizer", `index: ${i}`);
+          content.setAttribute("position", "0 0 0");
+          target.appendChild(content);
+
+          scene.appendChild(target);
+
+          target.addEventListener("targetFound", () => {
+            showElementInfo(elementsData[i]);
+          });
+          target.addEventListener("targetLost", () => {
+            hideElementInfo();
+          });
+        }
+      });
+
+    function showElementInfo(element) {
+      document.getElementById("element-symbol").textContent = element.symbol;
+      document.getElementById("element-name").textContent = element.name;
+      document.getElementById("element-number").textContent = element.number;
+      document.getElementById("element-mass").textContent = element.mass;
+      document.getElementById("element-en").textContent = element.electronegativity ?? "–";
+      document.getElementById("element-radius").textContent = element.radius ?? "–";
+      document.getElementById("element-shells").textContent = element.shells ? element.shells.join(", ") : "–";
+      document.getElementById("info-panel").style.display = "block";
+    }
+
+    function hideElementInfo() {
+      document.getElementById("info-panel").style.display = "none";
+    }
+  </script>
+
+</body>
+</html>

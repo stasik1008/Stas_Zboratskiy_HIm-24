@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <title>Графіки властивостей елементів</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 20px auto;
+    }
+    .chart-container {
+      width: 100%;
+      max-width: 800px;
+      height: 350px;
+      margin-bottom: 40px;
+    }
+    .back-button {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+    }
+    .back-button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>Графіки властивостей перших 18 елементів</h1>
+
+  <div class="chart-container">
+    <canvas id="radiusChart"></canvas>
+  </div>
+  <div class="chart-container">
+    <canvas id="electroChart"></canvas>
+  </div>
+
+  <!-- Кнопка повернення на головну -->
+  <a href="index.html" class="back-button">Повернутись на головну</a>
+
+  <script>
+    // Завантажуємо elements.json і малюємо графіки
+    fetch('data/elements.json')
+      .then(response => response.json())
+      .then(data => {
+        const elements = data.slice(0, 35);
+        const labels = elements.map(el => el.symbol);
+        const radiusData = elements.map(el => el.radius ?? null);
+        const electronegativityData = elements.map(el => el.electronegativity ?? null);
+
+        // Атомний радіус
+        new Chart(document.getElementById('radiusChart').getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Атомний радіус (пм)',
+              data: radiusData,
+              backgroundColor: 'rgba(54, 162, 235, 0.7)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } },
+            plugins: { legend: { display: true } }
+          }
+        });
+
+        // Електронегативність
+        new Chart(document.getElementById('electroChart').getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Електронегативність',
+              data: electronegativityData,
+              backgroundColor: 'rgba(255, 99, 132, 0.7)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } },
+            plugins: { legend: { display: true } }
+          }
+        });
+      })
+      .catch(err => console.error('Помилка завантаження elements.json:', err));
+  </script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Ізомери молекул (VR)</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="js/molecule-loader.js"></script>
+    <style>
+      body {
+        margin: 0;
+        font-family: sans-serif;
+      }
+
+      #menu {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        display: flex;
+        gap: 10px;
+        z-index: 9999;
+      }
+
+      .menu-btn {
+        padding: 10px 20px;
+        font-size: 16px;
+        background-color: #007BFF;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .menu-btn:hover {
+        background-color: #0056b3;
+      }
+
+      .active {
+        background-color: #004080;
+      }
+
+      #toggle-btn {
+        background-color: #28a745;
+      }
+
+      #toggle-btn:hover {
+        background-color: #1e7e34;
+      }
+
+      #info {
+        position: fixed;
+        top: 60px;
+        left: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px 15px;
+        border-radius: 5px;
+        font-size: 16px;
+        z-index: 9998;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      }
+    </style>
+
+    <script>
+      const moleculeSets = {
+        butene: {
+          formula: "C₄H₈",
+          isomers: [
+            { name: "цис-бутен", file: "molecules/butene_cis.json" },
+            { name: "транс-бутен", file: "molecules/butene_trans.json" }
+          ]
+        },
+        propanol: {
+          formula: "C₃H₈O",
+          isomers: [
+            { name: "1-пропанол", file: "molecules/propanol1.json" },
+            { name: "2-пропанол", file: "molecules/propanol2.json" }
+          ]
+        },
+        ethanol: {
+        formula: "C₂H₆O",
+        isomers: [
+            { name: "етанол", file: "molecules/ethanol.json" },
+            { name: "диметиловий етер", file: "molecules/dimethyl-ether.json" }
+        ]
+        }
+
+      };
+
+      let currentSet = "butene";
+      let current = 0;
+
+      function updateInfo() {
+        const formula = moleculeSets[currentSet].formula;
+        const isomerName = moleculeSets[currentSet].isomers[current].name;
+        document.getElementById("info").innerHTML = `
+          <strong>Формула:</strong> ${formula}<br />
+          <strong>Ізомер:</strong> ${isomerName}
+        `;
+      }
+
+      function loadCurrentMolecule() {
+        const scene = document.querySelector("a-scene");
+        const old = document.getElementById("molecule");
+        if (old) scene.removeChild(old);
+
+        const container = document.createElement("a-entity");
+        container.setAttribute("id", "molecule");
+        scene.appendChild(container);
+
+        const isomer = moleculeSets[currentSet].isomers[current];
+        loadMolecule(isomer.file, container);
+
+        updateInfo();
+      }
+
+      function toggleMolecule() {
+        const set = moleculeSets[currentSet];
+        current = (current + 1) % set.isomers.length;
+        loadCurrentMolecule();
+      }
+
+      function selectSet(setName) {
+        currentSet = setName;
+        current = 0;
+        loadCurrentMolecule();
+        highlightActiveButton();
+      }
+
+      function highlightActiveButton() {
+        const buttons = document.querySelectorAll(".menu-btn[data-set]");
+        buttons.forEach(btn => {
+          if (btn.dataset.set === currentSet) {
+            btn.classList.add("active");
+          } else {
+            btn.classList.remove("active");
+          }
+        });
+      }
+
+      window.addEventListener("load", () => {
+        highlightActiveButton();
+        loadCurrentMolecule();
+      });
+    </script>
+  </head>
+
+  <body>
+    <!-- Меню кнопок -->
+    <div id="menu">      
+      <button class="menu-btn" data-set="butene" onclick="selectSet('butene')">Бутен</button>
+      <button class="menu-btn" data-set="propanol" onclick="selectSet('propanol')">Пропанол</button>
+      <button class="menu-btn" data-set="ethanol" onclick="selectSet('ethanol')">Етанол</button>
+      <button class="menu-btn" id="toggle-btn" onclick="toggleMolecule()">Змінити ізомер</button>
+    </div>
+
+    <!-- Інформація про формулу та ізомер -->
+    <div id="info"></div>
+
+    <!-- Сцена A-Frame -->
+    <a-scene>
+      <a-entity id="cameraRig" position="0 1.6 4">
+        <a-camera wasd-controls-enabled="true"></a-camera>
+      </a-entity>
+
+      <a-light type="ambient" color="#888"></a-light>
+      <a-light type="directional" position="0 1 1" intensity="0.8"></a-light>
+
+      <a-sky color="#ECECEC"></a-sky>
+    </a-scene>
+  </body>
+</html>
